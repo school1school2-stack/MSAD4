@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي الاختبارات - أ/ عبدالعزيز الفيفي</title>
+    <title>محاكي الاختبارات - أ/ مساعد السعدان</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
@@ -39,7 +39,6 @@
         .summary-item:last-child { border-bottom: none; }
         .summary-ans-correct { color: var(--correct); font-weight: bold; }
         .summary-ans-wrong { color: var(--wrong); font-weight: bold; }
-        .hint-box { font-size: 0.9rem; color: #555; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; margin-top: 10px; text-align: right; }
 
         @media (max-width: 600px) {
             body { padding: 10px; }
@@ -55,7 +54,7 @@
 <div class="quiz-card">
     <div class="header">
         <h3>ثانوية الأمير عبدالمجيد 🎓</h3>
-        <h4>أ / عبدالعزيز الفيفي ✨</h4>
+        <h4>أ / مساعد السعدان ✨</h4>
     </div>
 
     <div id="lock-screen" class="hidden" style="text-align: center; padding: 40px;">
@@ -84,7 +83,6 @@
         </div>
         <div id="question-text" class="q-text"></div>
         <div id="options-area" class="options-grid"></div>
-        <div id="hint-display" class="hint-box hidden"></div>
         <div style="text-align: center; margin-top: 35px;">
             <button id="next-btn" class="btn hidden" onclick="nextQuestion()">السؤال التالي ⮕</button>
         </div>
@@ -94,7 +92,7 @@
         <h2 id="final-greeting"></h2>
         <div style="font-size: 4rem; font-weight: bold; margin: 15px 0; color: var(--main-color);" id="score-text"></div>
         
-        <!-- ملخص الإجابات البسيط (بدون إحصائيات معقدة) -->
+        <!-- ملخص الإجابات البسيط -->
         <div style="text-align: right; font-weight: bold; color: var(--main-color); margin-top: 15px;">ملخص إجاباتك:</div>
         <div id="answers-summary" class="summary-box"></div>
 
@@ -105,15 +103,6 @@
 </div>
 
 <script>
-    // كود الارتباط الشرطي لحماية الملكية الفكرية
-    (function checkIPProtection() {
-        const requiredSig = "أ/ عبدالعزيز الفيفي";
-        const schoolSig = "ثانوية الأمير عبدالمجيد";
-        if (!document.documentElement.innerHTML.includes(requiredSig) && !document.body.innerText.includes(schoolSig)) {
-            console.warn("تنبيه حماية الملكية الفكرية مفعل.");
-        }
-    })();
-
     const themes = [
         {main: "#800000", bg: "#fdf1f1", pbg: "rgba(128, 0, 0, 0.05)"},
         {main: "#2c3e50", bg: "#f4f7f6", pbg: "rgba(44, 62, 80, 0.05)"},
@@ -125,7 +114,7 @@
         {main: "#be185d", bg: "#fff1f2", pbg: "rgba(190, 24, 93, 0.05)"},
         {main: "#15803d", bg: "#f0fdf4", pbg: "rgba(21, 128, 61, 0.05)"},
         {main: "#4338ca", bg: "#eef2ff", pbg: "rgba(67, 56, 202, 0.05)"},
-        {main: "#334155", bg: "#f8fafc", pbg: "rgba: 51, 65, 85, 0.05".replace(/[^a-fA-F0-9#(), ]/g, '')},
+        {main: "#334155", bg: "#f8fafc", pbg: "rgba(51, 65, 85, 0.05)"},
         {main: "#7c2d12", bg: "#fff7ed", pbg: "rgba(124, 45, 18, 0.05)"},
         {main: "#1e1b4b", bg: "#fdfdfd", pbg: "rgba(30, 27, 75, 0.03)"}
     ];
@@ -135,142 +124,56 @@
     document.documentElement.style.setProperty('--bg-color', theme.bg);
     document.documentElement.style.setProperty('--passage-bg', theme.pbg);
 
-    // نموذج بيانات الجملة الاسمية ونواسخها (المفرد، المثنى، جمع المذكر، جمع المؤنث، جمع التكسير، الأسماء الخمسة: أبو وأخو)
+    // مصفوفة أسئلة الجملة الاسمية ونواسخها (المفرد، المثنى، جمع المذكر، جمع المؤنث، جمع التكسير، الأسماء الخمسة أبو وأخو)
     const rawQuizData = [
-        { 
-            questionNumber: 1, 
-            t: "إعراب مفرد", 
-            q: "ما إعراب كلمة (الطالبُ) في جملة (الطالبُ مجتهدٌ)؟", 
-            answerOptions: [
-                { text: "مبتدأ مرفوع وعلامة رفعه الضمة الظاهرة", isCorrect: true },
-                { text: "خبر مرفوع بالضمة", isCorrect: false },
-                { text: "فاعل مرفوع بالضمة", isCorrect: false },
-                { text: "اسم كان مرفوع", isCorrect: false }
-            ], 
-            hint: "المفرد يُرفع بالضمة الظاهرة. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 2, 
-            t: "أخوات كان", 
-            q: "كانَ المهندسونَ ......... (اختر الخبر المناسب لجمع المذكر السالم):", 
-            answerOptions: [
-                { text: "حاضرينَ", isCorrect: true },
-                { text: "حاضرون", isCorrect: false },
-                { text: "حاضرانِ", isCorrect: false },
-                { text: "حاضرةً", isCorrect: false }
-            ], 
-            hint: "خبر كان منصوب وعلامة نصبه الياء لأنه جمع مذكر سالم. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 3, 
-            t: "أخوات إن", 
-            q: "إِنَّ الطبيباتِ ......... (اختر الخبر المناسب لجمع المؤنث السالم):", 
-            answerOptions: [
-                { text: "مخلصاتٌ", isCorrect: true },
-                { text: "مخلصاتٍ", isCorrect: false },
-                { text: "مخلصاتون", isCorrect: false },
-                { text: "مخلصتين", isCorrect: false }
-            ], 
-            hint: "خبر إن مرفوع وعلامة رفعه الضمة لأنه جمع مؤنث سالم. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 4, 
-            t: "المثنى", 
-            q: "باتَ الطالبانِ ......... (اختر الخبر الصحيح للمثنى):", 
-            answerOptions: [
-                { text: "متهجدينِ / ساهرينِ (متهجدينِ)", isCorrect: true },
-                { text: "متهجدانِ", isCorrect: false },
-                { text: "متهجدين", isCorrect: false },
-                { text: "متهجدون", isCorrect: false }
-            ], 
-            hint: "خبر بات منصوب وعلامة نصبه الياء لأنه مثنى. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 5, 
-            t: "الأسماء الخمسة", 
-            q: "إِنَّ أباكَ ......... (اختر الخبر المناسب للأسماء الخمسة):", 
-            answerOptions: [
-                { text: "ذو خلقٍ", isCorrect: true },
-                { text: "ذا خلقٍ", isCorrect: false },
-                { text: "ذي خلقٍ", isCorrect: false },
-                { text: "ذان خلقٍ", isCorrect: false }
-            ], 
-            hint: "اسم إن منصوب بالألف، وخبرها مرفوع بالواو. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 6, 
-            t: "جمع التكسير", 
-            q: "كانتِ الطلابُ ......... (تصحيح/اختيار الخبر المناسب لجمع التكسير):", 
-            answerOptions: [
-                { text: "مستعدينَ (أو مستعدينَ/مستعدون حسب السياق، الخبر منصوب)", isCorrect: true },
-                { text: "مستعدون", isCorrect: false },
-                { text: "مستعدان", isCorrect: false },
-                { text: "مستعدة", isCorrect: false }
-            ], 
-            hint: "جمع التكسير يُعامل معاملة المفرد في الإعراب غالباً، وخبر كان منصوب بالفتحة. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 7, 
-            t: "أخو (الأسماء الخمسة)", 
-            q: "ليتَ أخاكَ ......... (اختر الخبر الصحيح):", 
-            answerOptions: [
-                { text: "مسافرٌ", isCorrect: true },
-                { text: "مسافراً", isCorrect: false },
-                { text: "مسافرٍ", isCorrect: false },
-                { text: "ذو سفرٍ", isCorrect: false }
-            ], 
-            hint: "ليت من أخوات إن تنصب الاسم وترفع الخبر. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 8, 
-            t: "صح وخطأ", 
-            q: "أخوات كان تدخل على الجملة الاسمية فتفعل: ترفع المبتدأ ويسمى اسمها، وتنصب الخبر ويسمى خبرها.", 
-            answerOptions: [
-                { text: "صحيح", isCorrect: true },
-                { text: "خطأ", isCorrect: false }
-            ], 
-            hint: "قاعدة أساسية لعمل أخوات كان. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 9, 
-            t: "صح وخطأ", 
-            q: "أخوات إن (إن، أن، كأن، لكن، ليت، لعل) تنصب المبتدأ ويسمى اسمها، وترفع الخبر ويسمى خبرها.", 
-            answerOptions: [
-                { text: "صحيح", isCorrect: true },
-                { text: "خطأ", isCorrect: false }
-            ], 
-            hint: "عكس عمل أخوات كان تماماً. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        },
-        { 
-            questionNumber: 10, 
-            t: "جمع المذكر", 
-            q: "المعلمون ......... (اختر المبتدأ والخبر الصحيحين مرفوعين بالواو):", 
-            answerOptions: [
-                { text: "مخلصون", isCorrect: true },
-                { text: "مخلصين", isCorrect: false },
-                { text: "مخلصان", isCorrect: false },
-                { text: "مخلصات", isCorrect: false }
-            ], 
-            hint: "المبتدأ والخبر مرفوعان بالواو لأنهما جمع مذكر سالم. ✨ أ / عبد العزيز الفيفي - ثانوية الأمير عبدالمجيد 🎓" 
-        }
+        { t: "إعراب مفرد", q: "في جملة (الطالبُ مجتهدٌ)، ما إعراب (المبتدأ)؟", opts: ["مبتدأ مرفوع وعلامة رفعه الضمة الظاهرة", "فاعل مرفوع بالضمة", "اسم كان مرفوع", "مفعول به منصوب"], ans: "مبتدأ مرفوع وعلامة رفعه الضمة الظاهرة" },
+        { t: "إعراب مفرد", q: "في جملة (الكتابُ مفيدٌ)، ما إعراب (مفيدٌ)؟", opts: ["خبر مرفوع وعلامة رفعه الضمة الظاهرة", "مبتدأ ثان مرفوع", "خبر كان منصوب", "اسم إن مرفوع"], ans: "خبر مرفوع وعلامة رفعه الضمة الظاهرة" },
+        { t: "المثنى", q: "في جملة (الطالبانِ مجتهدانِ)، ما علامة إعراب المثنى في المبتدأ والخبر؟", opts: ["الألف لأنهما مثنى", "الواو لأنهما مثنى", "الفتحة", "الكسرة"], ans: "الألف لأنهما مثنى" },
+        { t: "المثنى", q: "كانَ الطالبانِ ......... (اختر الخبر المناسب للمثنى):", opts: ["مجتهدينِ", "مجتهدانِ", "مجتهدون", "مجتهدةً"], ans: "مجتهدينِ" },
+        { t: "المثنى", q: "إِنَّ الكتابينِ ......... (اختر الخبر المناسب للمثنى):", opts: ["مفيدانِ", "مفيدينِ", "مفيدون", "مفيدةٌ"], ans: "مفيدانِ" },
+        { t: "جمع مذكر سالم", q: "في جملة (المعلمون مخلصون)، ما علامة إعراب المبتدأ والخبر؟", opts: ["الواو لأنهما جمع مذكر سالم", "الياء لأنهما جمع مذكر سالم", "الضمة الظاهرة", "الألف"], ans: "الواو لأنهما جمع مذكر سالم" },
+        { t: "جمع مذكر سالم", q: "ظلَّ المعلمونَ ......... (اختر الخبر المناسب لجمع المذكر السالم):", opts: ["مخلصينَ", "مخلصون", "مخلصانِ", "مخلصاتٍ"], ans: "مخلصينَ" },
+        { t: "جمع مذكر سالم", q: "لعلَّ المهندسينَ ......... (اختر الخبر المناسب لجمع المذكر السالم):", opts: ["حاضرون", "حاضرينَ", "حاضرانِ", "حاضرةٌ"], ans: "حاضرون" },
+        { t: "جمع مؤنث سالم", q: "في جملة (الطالباتُ مخلصاتٌ)، ما علامة إعراب جمع المؤنث السالم؟", opts: ["الضمة رفعاً والكسرة نصباً وجرّاً", "الفتحة نصباً", "الواو رفعاً", "الياء نصباً وجراً"], ans: "الضمة رفعاً والكسرة نصباً وجرّاً" },
+        { t: "جمع مؤنث سالم", q: "باتتِ الطبيباتُ ......... (اختر الخبر المناسب لجمع المؤنث السالم):", opts: ["ساهراتٍ", "ساهراتٌ", "ساهرتين", "ساهران"], ans: "ساهراتٍ" },
+        { t: "جمع مؤنث سالم", q: "إنَّ الفتياتِ ......... (اختر الخبر المناسب لجمع المؤنث السالم):", opts: ["مهذباتٌ", "مهذباتٍ", "مهذباتون", "مهذبتين"], ans: "مهذباتٌ" },
+        { t: "جمع تكسير", q: "في جملة (الطلابُ مجتهدون / الأبوابُ مفتوحةٌ)، جمع التكسير (الأبوابُ) يُرفع بـ:", opts: ["الضمة الظاهرة", "الواو", "الألف", "الفتحة"], ans: "الضمة الظاهرة" },
+        { t: "جمع تكسير", q: "كانتِ الجبالُ ......... (اختر الخبر المناسب لجمع التكسير المنصوب بخبر كان):", opts: ["شاهقةً", "شاهقاتٌ", "شاهقتان", "شاهقان"], ans: "شاهقةً" },
+        { t: "جمع تكسير", q: "إنَّ الأبوابَ ......... (اختر الخبر المناسب لاسم إن المنصوب):", opts: ["مفتوحةٌ", "مفتوحةً", "مفتوحاتٍ", "مفتوحان"], ans: "مفتوحةٌ" },
+        { t: "الأسماء الخمسة (أبو وأخو)", q: "في جملة (أبوكَ ذو علمٍ)، ما إعراب (أبوكَ)؟", opts: ["مبتدأ مرفوع وعلامة رفعه الواو لأنه من الأسماء الخمسة", "فاعل مرفوع بالواو", "اسم إن منصوب بالألف", "خبر مرفوع"], ans: "مبتدأ مرفوع وعلامة رفعه الواو لأنه من الأسماء الخمسة" },
+        { t: "الأسماء الخمسة (أبو وأخو)", q: "كانَ أبوكَ ......... (اختر الخبر المناسب لكان):", opts: ["كريماً", "كريمٌ", "كريمٍ", "ذو كرم"], ans: "كريماً" },
+        { t: "الأسماء الخمسة (أبو وأخو)", q: "إِنَّ أباكَ ......... (اختر الخبر المناسب المرفوع لإن):", opts: ["حاضرٌ", "حاضراً", "حاضرٍ", "ذا حضور"], ans: "حاضرٌ" },
+        { t: "الأسماء الخمسة (أبو وأخو)", q: "في جملة (جاءَ أخوكَ)، ما إعراب (أخوكَ)؟", opts: ["فاعل مرفوع بالواو لأنه من الأسماء الخمسة", "مبتدأ مرفوع بالواو", "اسم إن مرفوع", "مفعول به"], ans: "فاعل مرفوع بالواو لأنه من الأسماء الخمسة" },
+        { t: "الأسماء الخمسة (أبو وأخو)", q: "ليتَ أخاكَ ......... (اختر الخبر المناسب لليت):", opts: ["قادمٌ", "قادماً", "قادمٍ", "ذا قدوم"], ans: "قادمٌ" },
+        { t: "أخوات كان", q: "ما عمل أخوات كان (كان، صار، ليس، ظل، بات، أصبحت...):", opts: ["ترفع المبتدأ ويسمى اسمها، وتنصب الخبر ويسمى خبرها", "تنصب المبتدأ وترفع الخبر", "ترفع الطرفين", "تنصب الطرفين"], ans: "ترفع المبتدأ ويسمى اسمها، وتنصب الخبر ويسمى خبرها" },
+        { t: "أخوات إن", q: "ما عمل أخوات إن (إن، أن، كأن، لكن، ليت، لعل):", opts: ["تنصب المبتدأ ويسمى اسمها، وترفع الخبر ويسمى خبرها", "ترفع المبتدأ وتنصب الخبر", "ترفع الطرفين", "تنصب الطرفين"], ans: "تنصب المبتدأ ويسمى اسمها، وترفع الخبر ويسمى خبرها" },
+        { t: "صح وخطأ", q: "المبتدأ والخبر مرفوعان دائماً في الجملة الاسمية المجردة.", opts: ["صحيح", "خطأ"], ans: "صحيح" },
+        { t: "صح وخطأ", q: "جمع المذكر السالم يرفع بالواو وينصب ويجر بالياء.", opts: ["صحيح", "خطأ"], ans: "صحيح" },
+        { t: "صح وخطأ", q: "المثنى يرفع بالألف وينصب ويجر بالياء.", opts: ["صحيح", "خطأ"], ans: "صحيح" },
+        { t: "صح وخطأ", q: "جمع المؤنث السالم ينصب وعلامة نصبه الكسرة نيابة عن الفتحة.", opts: ["صحيح", "خطأ"], ans: "صحيح" },
+        { t: "صح وخطأ", q: "الأسماء الخمسة ترفع بالواو وتنصب بالألف وتجر بالياء إذا كانت مضافة.", opts: ["صحيح", "خطأ"], ans: "صحيح" },
+        { t: "تطبيق شامل", q: "أصبحَ الأخوةُ ......... (اختر الخبر المناسب):", opts: ["متفقينَ", "متفقون", "متفقانِ", "متفقاتٍ"], ans: "متفقينَ" },
+        { t: "تطبيق شامل", q: "لعلَّ الأبناءَ ......... (اختر الخبر المناسب):", opts: ["بارون", "بارين", "باران", "بارة"], ans: "بارون" },
+        { t: "تطبيق شامل", q: "ما إعراب كلمة (مجتهداً) في (ليس المهملُ مجتهداً)؟", opts: ["خبر ليس منصوب وعلامة نصبه الفتحة", "خبر مرفوع بالضمة", "حال منصوب", "مفعول به"], ans: "خبر ليس منصوب وعلامة نصبه الفتحة" },
+        { t: "تطبيق شامل", q: "أي الجمل التالية تمثل دخول (إنّ) بشكل صحيح مع الأسماء الخمسة؟", opts: ["إنَّ أباكَ ذو خلقٍ", "إنَّ أبوكَ ذو خلقٍ", "إنَّ أباكَ ذا خلقٍ", "إنَّ أَبِيكَ ذو خلقٍ"], ans: "إنَّ أباكَ ذو خلقٍ" }
     ];
 
-    const currentModelId = "الجملة الاسمية";
+    const currentModelId = "الجملة الاسمية)";
     let sName, sEmail, currentIdx = 0, userScore = 0, timer, finalQuestions;
     let studentAnswersLog = [];
 
-    // إعدادات Firebase الخاصة بك
-    const myFirebaseConfig = { 
-        apiKey: "AIzaSyBkCO7FDQXd89YDf843J4_AtvEFvzzt-R0", 
-        authDomain: "aztlg-494c3.firebaseapp.com", 
-        projectId: "aztlg-494c3", 
-        storageBucket: "aztlg-494c3.firebasestorage.app", 
-        messagingSenderId: "597051893949", 
-        appId: "1:597051893949:web:de5554ac900317a92b2fd4" 
+    // إعدادات قاعدة البيانات الخاصة بأستاذ مساعد
+    const musaedFirebaseConfig = { 
+        apiKey: "AIzaSyDGftCpTmowkhQlNAgH_o7dIMtD-RKSNaM", 
+        authDomain: "msad-e258c.firebaseapp.com", 
+        projectId: "msad-e258c", 
+        storageBucket: "msad-e258c.firebasestorage.app", 
+        messagingSenderId: "680278639571", 
+        appId: "1:680278639571:web:4e337e1751ebe9d9e92526" 
     };
 
-    const myApp = firebase.initializeApp(myFirebaseConfig, 'myApp');
-    const myDb = myApp.firestore();
+    const musaedApp = firebase.initializeApp(musaedFirebaseConfig, 'musaedApp');
+    const musaedDb = musaedApp.firestore();
 
     async function verifyAndStart() {
         const emailInput = document.getElementById('studentEmail').value.trim().toLowerCase();
@@ -279,14 +182,18 @@
         document.getElementById('status-msg').innerText = "جاري التحقق من بياناتك... ⏳";
 
         try {
-            const allowedDoc = await myDb.collection("allowed_students").doc(emailInput).get();
-            if (!allowedDoc.exists) {
-                // تجريبي أو للسماح المباشر في حال الاختبار المحلي، يمكن إزالة أو تعديل الشرط حسب الحاجة
-                sName = emailInput.split('@')[0];
-            } else {
-                sName = allowedDoc.data().name;
-            }
+            sName = emailInput.split('@')[0];
             sEmail = emailInput;
+
+            // التحقق من قاعدة البيانات هل اختبر مسبقاً
+            const resultCheck = await musaedDb.collection("alkfaeat_results")
+                .where("email", "==", sEmail)
+                .where("model_id", "==", currentModelId).get();
+
+            if (!resultCheck.empty) {
+                showLock(`عذراً يا ${sName}، لقد أديت هذا التحدي مسبقاً.`);
+                return;
+            }
 
             document.getElementById('challenger-display').innerText = `المتحدي: ${sName}`;
             finalQuestions = [...rawQuizData].sort(() => Math.random() - 0.5);
@@ -321,41 +228,26 @@
         document.getElementById('question-text').innerHTML = data.q;
         document.getElementById('next-btn').classList.add('hidden');
         
-        const hintEl = document.getElementById('hint-display');
-        hintEl.classList.add('hidden');
-        hintEl.innerHTML = data.hint || "";
-
         const box = document.getElementById('options-area'); box.innerHTML = '';
-        const optsList = data.answerOptions ? data.answerOptions.map(o => o.text) : (data.opts || []);
-        
-        [...optsList].sort(() => Math.random() - 0.5).forEach(oText => {
-            const d = document.createElement('div'); d.className = 'opt'; d.innerText = oText;
+        [...data.opts].sort(() => Math.random() - 0.5).forEach(o => {
+            const d = document.createElement('div'); d.className = 'opt'; d.innerText = o;
             d.onclick = () => {
                 clearInterval(timer);
-                const targetObj = data.answerOptions ? data.answerOptions.find(item => item.text === oText) : null;
-                const isCorrect = targetObj ? targetObj.isCorrect : (oText === data.ans);
-                const correctAnsText = targetObj ? (data.answerOptions.find(i=>i.isCorrect)?.text || data.ans) : data.ans;
-
+                const isCorrect = (o === data.ans);
                 if(isCorrect) userScore++;
                 
                 studentAnswersLog.push({
                     qText: data.q,
-                    studentAns: oText,
-                    correctAns: correctAnsText,
+                    studentAns: o,
+                    correctAns: data.ans,
                     isCorrect: isCorrect
                 });
 
                 document.querySelectorAll('.opt').forEach(el => {
                     el.onclick = null;
-                    const elObj = data.answerOptions ? data.answerOptions.find(i => i.text === el.innerText) : null;
-                    const elCorrect = elObj ? elObj.isCorrect : (el.innerText === data.ans);
-                    if(elCorrect) el.classList.add('correct');
-                    else if(el.innerText === oText) el.classList.add('wrong');
+                    if(el.innerText === data.ans) el.classList.add('correct');
+                    else if(el.innerText === o) el.classList.add('wrong');
                 });
-                
-                if(data.hint) {
-                    hintEl.classList.remove('hidden');
-                }
                 document.getElementById('next-btn').classList.remove('hidden');
             };
             box.appendChild(d);
@@ -370,12 +262,10 @@
             s--; document.getElementById('timer').innerText = s;
             if(s<=0) { 
                 clearInterval(timer); 
-                const data = finalQuestions[currentIdx];
-                const correctAnsText = data.answerOptions ? (data.answerOptions.find(i=>i.isCorrect)?.text || "") : data.ans;
                 studentAnswersLog.push({
-                    qText: data.q,
+                    qText: finalQuestions[currentIdx].q,
                     studentAns: "انتهى الوقت (بدون إجابة)",
-                    correctAns: correctAnsText,
+                    correctAns: finalQuestions[currentIdx].ans,
                     isCorrect: false
                 });
                 nextQuestion(); 
@@ -385,14 +275,14 @@
 
     function nextQuestion() { currentIdx++; loadQuestion(); }
 
-    function finish() {
+    async function finish() {
         document.getElementById('quiz-page').classList.add('hidden');
         document.getElementById('result-page').classList.remove('hidden');
         document.getElementById('final-greeting').innerHTML = `جهدك اليوم محل تقدير، وبإصرار وعزيمة ستصل لمستوى أعلى في المرة المقبلة <br> يا (${sName}) 💐💐 ثانوية الأمير عبدالمجيد 👨‍🎓`;
 
         document.getElementById('score-text').innerText = `${userScore} / ${finalQuestions.length}`;
         
-        // ملخص بسيط بدون إحصائيات معقدة
+        // عرض ملخص الإجابات البسيط للطالب
         const summaryBox = document.getElementById('answers-summary');
         summaryBox.innerHTML = '';
         studentAnswersLog.forEach((item, index) => {
@@ -406,6 +296,17 @@
                 ${!item.isCorrect ? `<div>الإجابة الصحيحة: <span class="summary-ans-correct">${item.correctAns}</span></div>` : ''}
             `;
             summaryBox.appendChild(div);
+        });
+
+        // حفظ النتيجة في قاعدة بيانات أستاذ مساعد
+        await musaedDb.collection("alkfaeat_results").add({ 
+            name: sName, 
+            email: sEmail, 
+            score: userScore, 
+            total: finalQuestions.length, 
+            model_id: currentModelId, 
+            answers: studentAnswersLog,
+            time: firebase.firestore.FieldValue.serverTimestamp() 
         });
     }
 </script>
